@@ -13,7 +13,7 @@ func (gen *Generator) getStructHelpers(goStructName []byte, cStructName string, 
 	cgoSpec := gen.tr.CGoSpec(spec, true)
 
 	buf := new(bytes.Buffer)
-	fmt.Fprintf(buf, "func (x *%s) Ref() *%s", goStructName, cgoSpec)
+	fmt.Fprintf(buf, "func (x *%s) CGO_Ref() *%s", goStructName, cgoSpec)
 	fmt.Fprintf(buf, `{
 		if x == nil {
 			return nil
@@ -21,22 +21,22 @@ func (gen *Generator) getStructHelpers(goStructName []byte, cStructName string, 
 		return x.ref%2x
 	}`, crc)
 	helpers = append(helpers, &Helper{
-		Name:        fmt.Sprintf("%s.Ref", goStructName),
+		Name:        fmt.Sprintf("%s.CGO_Ref", goStructName),
 		Description: "Ref returns the underlying reference to C object or nil if struct is nil.",
 		Source:      buf.String(),
 	})
 
 	buf.Reset()
-	fmt.Fprintf(buf, "func (x *%s) Free()", goStructName)
+	fmt.Fprintf(buf, "func (x *%s) CGO_Free()", goStructName)
 	fmt.Fprintf(buf, `{
 		if x != nil && x.allocs%2x != nil {
-			x.allocs%2x.(*cgoAllocMap).Free()
+			x.allocs%2x.(*cgoAllocMap).CGO_Free()
 			x.ref%2x = nil
 		}
 	}`, crc, crc, crc)
 	helpers = append(helpers, &Helper{
-		Name: fmt.Sprintf("%s.Free", goStructName),
-		Description: "Free invokes alloc map's free mechanism that cleanups any allocated memory using C free.\n" +
+		Name: fmt.Sprintf("%s.CGO_Free", goStructName),
+		Description: "CGO_Free invokes alloc map's free mechanism that cleanups any allocated memory using C free.\n" +
 			"Does nothing if struct is nil or has no allocation map.",
 		Source: buf.String(),
 	})
@@ -82,12 +82,12 @@ func (gen *Generator) getStructHelpers(goStructName []byte, cStructName string, 
 	})
 
 	buf.Reset()
-	fmt.Fprintf(buf, "func (x *%s) Deref() {\n", goStructName)
+	fmt.Fprintf(buf, "func (x *%s) CGO_Deref() {\n", goStructName)
 	buf.Write(gen.getDerefSource(goStructName, cStructName, spec))
 	buf.WriteRune('}')
 	helpers = append(helpers, &Helper{
-		Name: fmt.Sprintf("%s.Deref", goStructName),
-		Description: "Deref uses the underlying reference to C object and fills the wrapping struct with values.\n" +
+		Name: fmt.Sprintf("%s.CGO_Deref", goStructName),
+		Description: "CGO_Deref uses the underlying reference to C object and fills the wrapping struct with values.\n" +
 			"Do not forget to call this method whether you get a struct for C object and want to read its values.",
 		Source: buf.String(),
 	})
@@ -102,7 +102,7 @@ func (gen *Generator) getRawStructHelpers(goStructName []byte, cStructName strin
 	structSpec := spec.(*tl.CStructSpec)
 
 	buf := new(bytes.Buffer)
-	fmt.Fprintf(buf, "func (x *%s) Ref() *%s", goStructName, cgoSpec)
+	fmt.Fprintf(buf, "func (x *%s) CGO_Ref() *%s", goStructName, cgoSpec)
 	fmt.Fprintf(buf, `{
 		if x == nil {
 			return nil
@@ -110,21 +110,21 @@ func (gen *Generator) getRawStructHelpers(goStructName []byte, cStructName strin
 		return (*%s)(unsafe.Pointer(x))
 	}`, cgoSpec)
 	helpers = append(helpers, &Helper{
-		Name:        fmt.Sprintf("%s.Ref", goStructName),
-		Description: "Ref returns a reference to C object as it is.",
+		Name:        fmt.Sprintf("%s.CGO_Ref", goStructName),
+		Description: "CGO_Ref returns a reference to C object as it is.",
 		Source:      buf.String(),
 	})
 
 	buf.Reset()
-	fmt.Fprintf(buf, "func (x *%s) Free()", goStructName)
+	fmt.Fprintf(buf, "func (x *%s) CGO_Free()", goStructName)
 	fmt.Fprint(buf, `{
 		if x != nil  {
 			C.free(unsafe.Pointer(x))
 		}
 	}`)
 	helpers = append(helpers, &Helper{
-		Name:        fmt.Sprintf("%s.Free", goStructName),
-		Description: "Free cleanups the referenced memory using C free.",
+		Name:        fmt.Sprintf("%s.CGO_Free", goStructName),
+		Description: "CGO_Free cleanups the referenced memory using C free.",
 		Source:      buf.String(),
 	})
 
